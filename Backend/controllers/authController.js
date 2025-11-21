@@ -71,13 +71,13 @@ exports.signup = async (req, res) => {
 // @access  Public
 exports.login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
 
     // Validation
-    if (!email || !password || !role) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email, password, and role",
+        message: "Please provide email and password",
       });
     }
 
@@ -88,14 +88,6 @@ exports.login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
-      });
-    }
-
-    // Verify role matches
-    if (user.role !== role.toLowerCase()) {
-      return res.status(403).json({
-        success: false,
-        message: `This email is registered as ${user.role}, not ${role}`,
       });
     }
 

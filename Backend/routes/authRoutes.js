@@ -11,7 +11,7 @@ const { validateEmailForRole } = require("../middleware/validateEmail");
 
 // Public routes
 router.post("/signup", validateEmailForRole, signup);
-router.post("/login", validateEmailForRole, login);
+router.post("/login", login); // Login doesn't need role validation - role is stored in user record
 router.post("/verify", verifyToken);
 
 // Protected routes

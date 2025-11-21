@@ -18,6 +18,10 @@ import {
   Target,
   Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCurrentUser, verifyAuth, logoutUser } from "@/lib/auth";
+import { dashboardApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 const mentorStats = [
   { label: "Active Forms", value: "08", detail: "3 new today", icon: MessageSquare },
@@ -67,6 +71,55 @@ const playbooks = [
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState(getCurrentUser());
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const verifiedUser = await verifyAuth();
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          await dashboardApi.getTeacherDashboard();
+        } else {
+          toast({
+            title: "Authentication Error",
+            description: "Please login again",
+            variant: "destructive",
+          });
+          logoutUser();
+          navigate("/login");
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load dashboard",
+          variant: "destructive",
+        });
+        logoutUser();
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate("/");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#020617] text-white">
+        <div className="text-center">
+          <p className="text-lg">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
@@ -83,7 +136,7 @@ const TeacherDashboard = () => {
               <p className="text-lg font-semibold">Mentor Command</p>
             </div>
           </div>
-          <Button variant="outline" className="border-white/30 text-white" onClick={() => navigate("/")}>
+          <Button variant="outline" className="border-white/30 text-white" onClick={handleLogout}>
             Exit studio
           </Button>
         </div>
@@ -94,7 +147,7 @@ const TeacherDashboard = () => {
           <Card className="border-white/10 bg-white/5 p-8 text-white shadow-2xl shadow-accent/20">
             <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white/70">Welcome back, Prof. Rao</p>
+                  <p className="text-sm text-white/70">Welcome back, {user?.name || "Teacher"}</p>
                   <h1 className="text-4xl font-semibold">Classrooms synced. Insights armed.</h1>
                 </div>
                 <Sparkles className="h-10 w-10 text-primary" />

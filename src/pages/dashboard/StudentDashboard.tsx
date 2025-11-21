@@ -4,6 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { Award, Flame, Gamepad2, MessageSquare, Rocket, Sparkles, Star, TrendingUp, Trophy, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCurrentUser, verifyAuth, logoutUser } from "@/lib/auth";
+import { dashboardApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 
 const pulseStats = [
@@ -57,6 +61,57 @@ const badgeStack = [
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState(getCurrentUser());
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // Verify token and get user data
+        const verifiedUser = await verifyAuth();
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          // Fetch dashboard-specific data
+          await dashboardApi.getStudentDashboard();
+        } else {
+          toast({
+            title: "Authentication Error",
+            description: "Please login again",
+            variant: "destructive",
+          });
+          logoutUser();
+          navigate("/login");
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load dashboard",
+          variant: "destructive",
+        });
+        logoutUser();
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate("/");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#020617] text-white">
+        <div className="text-center">
+          <p className="text-lg">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
@@ -73,7 +128,7 @@ const StudentDashboard = () => {
               <p className="text-lg font-semibold">Student Arena</p>
             </div>
           </div>
-          <Button variant="outline" className="border-white/30 text-white" onClick={() => navigate("/")}>
+          <Button variant="outline" className="border-white/30 text-white" onClick={handleLogout}>
             Exit arena
           </Button>
         </div>
@@ -83,10 +138,10 @@ const StudentDashboard = () => {
         <section className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
           <Card className="border-white/10 bg-white/5 p-8 text-white shadow-2xl shadow-primary/20">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/70">Welcome back, Alex</p>
-                <h1 className="text-4xl font-semibold">Your campus saga continues.</h1>
-              </div>
+          <div>
+            <p className="text-sm text-white/70">Welcome back, {user?.name || "Student"}</p>
+            <h1 className="text-4xl font-semibold">Your campus saga continues.</h1>
+          </div>
               <Gamepad2 className="h-10 w-10 text-accent" />
             </div>
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

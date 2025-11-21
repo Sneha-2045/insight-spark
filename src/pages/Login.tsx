@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, GraduationCap, Shield, Sparkles, Trophy, Users } from "lucide-react";
+import { loginUser, signupUser } from "@/lib/auth";
+import { toast } from "@/hooks/use-toast";
 
 const roleCards = [
   {
@@ -44,9 +46,81 @@ const boostStats = [
 const Login = () => {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<"student" | "teacher" | "society" | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Form state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
 
-  const handleLogin = (role: string) => {
-    navigate(`/dashboard/${role}`);
+  const handleLogin = async () => {
+    if (!loginEmail || !loginPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const user = await loginUser(loginEmail, loginPassword);
+      toast({
+        title: "Success",
+        description: "Login successful!",
+      });
+      // Navigate to the dashboard based on user's role from database
+      navigate(`/dashboard/${user.role}`);
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async () => {
+    if (!selectedRole) {
+      toast({
+        title: "Error",
+        description: "Please select a role first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!signupName || !signupEmail || !signupPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signupUser(signupName, signupEmail, signupPassword, selectedRole);
+      toast({
+        title: "Success",
+        description: "Account created successfully!",
+      });
+      navigate(`/dashboard/${selectedRole}`);
+    } catch (error) {
+      toast({
+        title: "Signup Failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -110,63 +184,129 @@ const Login = () => {
         </Card>
 
         <Card className="border-white/10 bg-white/5 p-8 text-white shadow-2xl shadow-primary/30">
-          {selectedRole ? (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-white/70">Logging in as</p>
-                  <p className="text-2xl font-semibold capitalize">{selectedRole}</p>
+          <div className="space-y-6">
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white/10">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="login" className="space-y-4">
+                <div className="mb-4">
+                  <p className="text-sm text-white/70">Login with your email and password</p>
                 </div>
-                <Button variant="outline" className="border-white/30 text-white" onClick={() => setSelectedRole(null)}>
-                  Switch role
-                </Button>
-              </div>
-
-              <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-white/10">
-                  <TabsTrigger value="login">Login</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="login" className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-white/80">
                       Email
                     </Label>
-                    <Input id="email" type="email" placeholder="you@campus.edu" className="border-white/20 bg-black/20 text-white placeholder:text-white/40" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="you@campus.edu" 
+                      className="border-white/20 bg-black/20 text-white placeholder:text-white/40"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      disabled={isLoading}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isLoading) {
+                          handleLogin();
+                        }
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-white/80">
                       Password
                     </Label>
-                    <Input id="password" type="password" placeholder="••••••••" className="border-white/20 bg-black/20 text-white placeholder:text-white/40" />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="border-white/20 bg-black/20 text-white placeholder:text-white/40"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      disabled={isLoading}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isLoading) {
+                          handleLogin();
+                        }
+                      }}
+                    />
                   </div>
-                  <Button className="w-full rounded-full bg-gradient-to-r from-primary to-accent font-semibold shadow-lg shadow-primary/40" onClick={() => handleLogin(selectedRole)}>
-                    Enter {selectedRole} arena
+                  <Button 
+                    className="w-full rounded-full bg-gradient-to-r from-primary to-accent font-semibold shadow-lg shadow-primary/40" 
+                    onClick={handleLogin}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Loading..." : "Login"}
                   </Button>
                 </TabsContent>
 
                 <TabsContent value="signup" className="space-y-4">
+                  {!selectedRole && (
+                    <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+                      <p className="font-semibold">Select a role first</p>
+                      <p className="mt-1 text-xs text-amber-200/80">Please choose your role from the left to continue with signup.</p>
+                    </div>
+                  )}
+                  {selectedRole && (
+                    <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3">
+                      <div>
+                        <p className="text-xs text-white/70">Signing up as</p>
+                        <p className="text-lg font-semibold capitalize">{selectedRole}</p>
+                      </div>
+                      <Button variant="outline" size="sm" className="border-white/30 text-white" onClick={() => setSelectedRole(null)}>
+                        Change
+                      </Button>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-white/80">
                       Full Name
                     </Label>
-                    <Input id="name" placeholder="Avery Patel" className="border-white/20 bg-black/20 text-white placeholder:text-white/40" />
+                    <Input 
+                      id="name" 
+                      placeholder="Avery Patel" 
+                      className="border-white/20 bg-black/20 text-white placeholder:text-white/40"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      disabled={isLoading}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email" className="text-white/80">
                       Campus Email
                     </Label>
-                    <Input id="signup-email" type="email" placeholder="you@campus.edu" className="border-white/20 bg-black/20 text-white placeholder:text-white/40" />
+                    <Input 
+                      id="signup-email" 
+                      type="email" 
+                      placeholder="you@campus.edu" 
+                      className="border-white/20 bg-black/20 text-white placeholder:text-white/40"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      disabled={isLoading}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-white/80">
                       Create Password
                     </Label>
-                    <Input id="signup-password" type="password" placeholder="••••••••" className="border-white/20 bg-black/20 text-white placeholder:text-white/40" />
+                    <Input 
+                      id="signup-password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="border-white/20 bg-black/20 text-white placeholder:text-white/40"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
                   </div>
-                  <Button className="w-full rounded-full bg-white/90 font-semibold text-slate-900 hover:bg-white" onClick={() => handleLogin(selectedRole)}>
-                    Create & jump in
+                  <Button 
+                    className="w-full rounded-full bg-white/90 font-semibold text-slate-900 hover:bg-white" 
+                    onClick={handleSignup}
+                    disabled={isLoading || !selectedRole}
+                  >
+                    {isLoading ? "Creating..." : "Create & jump in"}
                   </Button>
                 </TabsContent>
               </Tabs>
@@ -178,16 +318,6 @@ const Login = () => {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="space-y-6 text-center">
-              <Trophy className="mx-auto h-12 w-12 text-secondary" />
-              <h2 className="text-3xl font-semibold">Choose your avatar</h2>
-              <p className="text-white/70">Select a role to unlock the right controls, XP boosts, and dashboards.</p>
-              <Button className="rounded-full bg-white/90 text-slate-900" onClick={() => setSelectedRole("student")}>
-                Auto-pick Student Mode
-              </Button>
-            </div>
-          )}
         </Card>
       </div>
     </div>

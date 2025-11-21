@@ -4,6 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
 import { Award, Calendar, Flame, Megaphone, Music3, Plus, Sparkles, Star, Ticket, TrendingUp, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getCurrentUser, verifyAuth, logoutUser } from "@/lib/auth";
+import { dashboardApi } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 const communityStats = [
   { label: "Events staged", value: "15", detail: "9 campuses", icon: Calendar },
@@ -50,6 +54,55 @@ const collabTracks = [
 
 const SocietyDashboard = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState(getCurrentUser());
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const verifiedUser = await verifyAuth();
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          await dashboardApi.getSocietyDashboard();
+        } else {
+          toast({
+            title: "Authentication Error",
+            description: "Please login again",
+            variant: "destructive",
+          });
+          logoutUser();
+          navigate("/login");
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load dashboard",
+          variant: "destructive",
+        });
+        logoutUser();
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate("/");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#020617] text-white">
+        <div className="text-center">
+          <p className="text-lg">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020617] text-white">
@@ -66,7 +119,7 @@ const SocietyDashboard = () => {
               <p className="text-lg font-semibold">Society Control Room</p>
             </div>
           </div>
-          <Button variant="outline" className="border-white/30 text-white" onClick={() => navigate("/")}>
+          <Button variant="outline" className="border-white/30 text-white" onClick={handleLogout}>
             Exit stage
           </Button>
         </div>
